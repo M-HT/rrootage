@@ -30,9 +30,9 @@ static Mix_Music *music[MUSIC_NUM];
 #define CHUNK_NUM 16
 
 static char *chunkFileName[CHUNK_NUM] = {
-  "laser_start.wav", "laser.wav", "damage.wav", "bomb.wav", 
+  "laser_start.wav", "laser.wav", "damage.wav", "bomb.wav",
   "destroied.wav", "explosion1.wav", "explosion2.wav", "miss.wav", "extend.wav",
-  "grz.wav", "grzinv.wav", 
+  "grz.wav", "grzinv.wav",
   "shot.wav", "change.wav",
   "reflec1.wav", "reflec2.wav", "ref_ready.wav",
 };
@@ -83,7 +83,7 @@ static void loadSounds() {
   for ( i=0 ; i<CHUNK_NUM ; i++ ) {
     strcpy(name, "sounds/");
     strcat(name, chunkFileName[i]);
-    if ( NULL == (chunk[i] = Mix_LoadWAV(name)) ) {
+    if ( NULL == (chunk[i] = Mix_LoadWAV_RW(SDL_RWFromFile(name, "rb"), 1)) ) {
       fprintf(stderr, "Couldn't load: %s\n", name);
       useAudio = 0;
       return;
@@ -106,13 +106,23 @@ void initSound() {
   audio_format = AUDIO_S16;
   audio_channels = 1;
   audio_buffers = 4096;
-  
+
+#if SDL_VERSIONNUM(SDL_MIXER_MAJOR_VERSION, SDL_MIXER_MINOR_VERSION, SDL_MIXER_PATCHLEVEL) >= SDL_VERSIONNUM(2,0,2)
+  const SDL_version *link_version = Mix_Linked_Version();
+  if (SDL_VERSIONNUM(link_version->major, link_version->minor, link_version->patch) >= SDL_VERSIONNUM(2,0,2)) {
+    if (Mix_OpenAudioDevice(audio_rate, audio_format, audio_channels, audio_buffers, NULL, SDL_AUDIO_ALLOW_ANY_CHANGE) < 0) {
+      fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
+      return;
+    }
+  }
+  else
+#endif
   if (Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers) < 0) {
     fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
     return;
-  } else {
-    Mix_QuerySpec(&audio_rate, &audio_format, &audio_channels);
   }
+
+  Mix_QuerySpec(&audio_rate, &audio_format, &audio_channels);
 
   useAudio = 1;
   loadSounds();
@@ -139,7 +149,7 @@ void stopMusic() {
 
 void playChunk(int idx) {
   if ( !useAudio ) return;
-  Mix_PlayChannel(chunkChannel[idx], chunk[idx], 0);
+  Mix_PlayChannelTimed(chunkChannel[idx], chunk[idx], 0, -1);
 }
 
 void haltChunk(int idx) {

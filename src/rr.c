@@ -216,7 +216,7 @@ static void parseArgs(int argc, char *argv[]) {
       if ( brightness < 0 || brightness > 256 ) {
 	brightness = DEFAULT_BRIGHTNESS;
       }
-      }*/ 
+      }*/
     else if ( strcmp(argv[i], "-nowait") == 0 ) {
       nowait = 1;
     } else if ( strcmp(argv[i], "-accframe") == 0 ) {
@@ -248,10 +248,23 @@ int main(int argc, char *argv[]) {
   initTitle();
 
   while ( !done ) {
-    SDL_PollEvent(&event);
-    keys = SDL_GetKeyState(NULL);
-    if ( keys[SDLK_ESCAPE] == SDL_PRESSED || event.type == SDL_QUIT ) done = 1;
-    if ( keys[SDLK_p] == SDL_PRESSED ) {
+    while ( !done && SDL_PollEvent(&event) ) {
+      switch ( event.type ) {
+        case SDL_QUIT:
+          done = 1;
+          break;
+        case SDL_WINDOWEVENT:
+          if ( event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ) {
+            resized(event.window.data1, event.window.data2);
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    keys = SDL_GetKeyboardState(NULL);
+    if ( keys[SDL_SCANCODE_ESCAPE] == SDL_PRESSED ) done = 1;
+    if ( keys[SDL_SCANCODE_P] == SDL_PRESSED ) {
       if ( !pPrsd ) {
 	if ( status == IN_GAME ) {
 	  status = PAUSE;

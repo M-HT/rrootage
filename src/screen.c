@@ -32,14 +32,36 @@
 #define LOWRES_SCREEN_WIDTH 320
 #define LOWRES_SCREEN_HEIGHT 240
 
-static int screenWidth, screenHeight;
+static int screenStartX, screenStartY, screenWidth, screenHeight;
+static SDL_Window *window;
+static SDL_GLContext context;
 
 // Reset viewport when the screen is resized.
 static void screenResized() {
-  glViewport(0, 0, screenWidth, screenHeight);
+#if SDL_VERSION_ATLEAST(2,0,1)
+  SDL_version linked;
+  SDL_GetVersion(&linked);
+  if ( SDL_VERSIONNUM(linked.major,linked.minor,linked.patch) >= SDL_VERSIONNUM(2,0,1) ) {
+    int glwidth, glheight;
+    SDL_GL_GetDrawableSize(window, &glwidth, &glheight);
+    if (((float)glwidth) / SCREEN_WIDTH <= ((float)glheight) / SCREEN_HEIGHT) {
+      screenStartX = 0;
+      screenWidth = glwidth;
+      screenHeight = (glwidth * SCREEN_HEIGHT) / SCREEN_WIDTH;
+      screenStartY = (glheight - screenHeight) / 2;                }
+    else
+    {
+      screenStartY = 0;
+      screenHeight = glheight;
+      screenWidth = (glheight * SCREEN_WIDTH) / SCREEN_HEIGHT;
+      screenStartX = (glwidth - screenWidth) / 2;
+    }
+  }
+#endif
+  glViewport(screenStartX, screenStartY, screenWidth, screenHeight);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(45.0f, (GLfloat)screenWidth/(GLfloat)screenHeight, 0.1f, FAR_PLANE);
+  gluPerspective(45.0f, (GLfloat)SCREEN_WIDTH/(GLfloat)SCREEN_HEIGHT, 0.1f, FAR_PLANE);
   glMatrixMode(GL_MODELVIEW);
 }
 
@@ -50,7 +72,10 @@ void resized(int width, int height) {
 
 // Init OpenGL.
 static void initGL() {
-  glViewport(0, 0, screenWidth, screenHeight);
+  SDL_GetWindowSize(window, &screenWidth, &screenHeight);
+  screenStartX = 0;
+  screenStartY = 0;
+  glViewport(screenStartX, screenStartY, screenWidth, screenHeight);
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
   glLineWidth(1);
@@ -107,7 +132,7 @@ static GLuint titleTexture;
 int lowres = 0;
 int windowMode = 0;
 int brightness = DEFAULT_BRIGHTNESS;
-Uint8 *keys;
+const Uint8 *keys;
 SDL_Joystick *stick = NULL;
 
 void initSDL() {
@@ -122,27 +147,34 @@ void initSDL() {
   }
 
   /* Initialize SDL */
-  if ( SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0 ) {
+  if ( SDL_Init(SDL_INIT_VIDEO) < 0 ) {
     fprintf(stderr, "Unable to initialize SDL: %s\n", SDL_GetError());
     exit(1);
   }
 
   /* Create an OpenGL screen */
   if ( windowMode ) {
-    videoFlags = SDL_OPENGL | SDL_RESIZABLE;
+    videoFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
   } else {
-    videoFlags = SDL_OPENGL | SDL_FULLSCREEN;
+    videoFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN_DESKTOP;
   }
-  if ( SDL_SetVideoMode(screenWidth, screenHeight, 0, videoFlags) == NULL ) {
-    fprintf(stderr, "Unable to create OpenGL screen: %s\n", SDL_GetError());
+  window = SDL_CreateWindow(CAPTION, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screenWidth, screenHeight, videoFlags);
+  if ( window == NULL ) {
+    fprintf(stderr, "Unable to create SDL window: %s\n", SDL_GetError());
+    SDL_Quit();
+    exit(2);
+  }
+  context = SDL_GL_CreateContext(window);
+  if ( context == NULL ) {
+    SDL_DestroyWindow(window);
+    fprintf(stderr, "Unable to create OpenGL context: %s\n", SDL_GetError());
     SDL_Quit();
     exit(2);
   }
 
-  stick = SDL_JoystickOpen(0);
-
-  /* Set the title bar in environments that support it */
-  SDL_WM_SetCaption(CAPTION, NULL);
+  if ( SDL_InitSubSystem(SDL_INIT_JOYSTICK) >= 0 ) {
+    stick = SDL_JoystickOpen(0);
+  }
 
   initGL();
   loadGLTexture(STAR_BMP, &starTexture);
@@ -154,6 +186,8 @@ void initSDL() {
 
 void closeSDL() {
   SDL_ShowCursor(SDL_ENABLE);
+  SDL_GL_DeleteContext(context);
+  SDL_DestroyWindow(window);
 }
 
 float zoom = 15;
@@ -200,7 +234,7 @@ void drawGLSceneEnd() {
 }
 
 void swapGLScene() {
-  SDL_GL_SwapBuffers();
+  SDL_GL_SwapWindow(window);
 }
 
 void drawBox(GLfloat x, GLfloat y, GLfloat width, GLfloat height,
@@ -924,16 +958,16 @@ int getPadState() {
     x = SDL_JoystickGetAxis(stick, 0);
     y = SDL_JoystickGetAxis(stick, 1);
   }
-  if ( keys[SDLK_RIGHT] == SDL_PRESSED || keys[SDLK_KP6] == SDL_PRESSED || x > JOYSTICK_AXIS ) {
+  if ( keys[SDL_SCANCODE_RIGHT] == SDL_PRESSED || keys[SDL_SCANCODE_KP_6] == SDL_PRESSED || x > JOYSTICK_AXIS ) {
     pad |= PAD_RIGHT;
   }
-  if ( keys[SDLK_LEFT] == SDL_PRESSED || keys[SDLK_KP4] == SDL_PRESSED || x < -JOYSTICK_AXIS ) {
+  if ( keys[SDL_SCANCODE_LEFT] == SDL_PRESSED || keys[SDL_SCANCODE_KP_4] == SDL_PRESSED || x < -JOYSTICK_AXIS ) {
     pad |= PAD_LEFT;
   }
-  if ( keys[SDLK_DOWN] == SDL_PRESSED || keys[SDLK_KP2] == SDL_PRESSED || y > JOYSTICK_AXIS ) {
+  if ( keys[SDL_SCANCODE_DOWN] == SDL_PRESSED || keys[SDL_SCANCODE_KP_2] == SDL_PRESSED || y > JOYSTICK_AXIS ) {
     pad |= PAD_DOWN;
   }
-  if ( keys[SDLK_UP] == SDL_PRESSED ||  keys[SDLK_KP8] == SDL_PRESSED || y < -JOYSTICK_AXIS ) {
+  if ( keys[SDL_SCANCODE_UP] == SDL_PRESSED ||  keys[SDL_SCANCODE_KP_8] == SDL_PRESSED || y < -JOYSTICK_AXIS ) {
     pad |= PAD_UP;
   }
   return pad;
@@ -943,6 +977,22 @@ int buttonReversed = 0;
 
 int getButtonState() {
   int btn = 0;
+#if defined(PYRA)
+  if ( keys[SDL_SCANCODE_HOME] == SDL_PRESSED || keys[SDL_SCANCODE_PAGEUP] == SDL_PRESSED ) {
+    if ( !buttonReversed ) {
+      btn |= PAD_BUTTON1;
+    } else {
+      btn |= PAD_BUTTON2;
+    }
+  }
+  if ( keys[SDL_SCANCODE_PAGEDOWN] == SDL_PRESSED || keys[SDL_SCANCODE_END] == SDL_PRESSED ) {
+    if ( !buttonReversed ) {
+      btn |= PAD_BUTTON2;
+    } else {
+      btn |= PAD_BUTTON1;
+    }
+  }
+#else
   int btn1 = 0, btn2 = 0, btn3 = 0, btn4 = 0;
   if ( stick != NULL ) {
     btn1 = SDL_JoystickGetButton(stick, 0);
@@ -950,19 +1000,20 @@ int getButtonState() {
     btn3 = SDL_JoystickGetButton(stick, 2);
     btn4 = SDL_JoystickGetButton(stick, 3);
   }
-  if ( keys[SDLK_z] == SDL_PRESSED || btn1 || btn4 ) {
+  if ( keys[SDL_SCANCODE_Z] == SDL_PRESSED || btn1 || btn4 ) {
     if ( !buttonReversed ) {
       btn |= PAD_BUTTON1;
     } else {
       btn |= PAD_BUTTON2;
     }
   }
-  if ( keys[SDLK_x] == SDL_PRESSED || btn2 || btn3 ) {
+  if ( keys[SDL_SCANCODE_X] == SDL_PRESSED || btn2 || btn3 ) {
     if ( !buttonReversed ) {
       btn |= PAD_BUTTON2;
     } else {
       btn |= PAD_BUTTON1;
     }
   }
+#endif
   return btn;
 }
