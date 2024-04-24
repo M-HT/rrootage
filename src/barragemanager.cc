@@ -40,6 +40,7 @@ static int readBulletMLFiles(const char *dirPath, Barrage brg[]) {
     strcpy(fileName, dirPath);
     strcat(fileName, "/");
     strncat(fileName, dir->d_name, sizeof(fileName)-strlen(fileName)-1);
+    fileName[255] = 0;
     brg[i].bulletml = new BulletMLParserTinyXML(fileName);
     brg[i].bulletml->build(); i++;
     printf("%s\n", fileName);

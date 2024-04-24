@@ -86,7 +86,7 @@ void loadGLTexture(char *fileName, GLuint *texture) {
   glBindTexture(GL_TEXTURE_2D, *texture);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST);
-  gluBuild2DMipmaps(GL_TEXTURE_2D, 3, surface->w, surface->h, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
+  gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB, surface->w, surface->h, GL_RGB, GL_UNSIGNED_BYTE, surface->pixels);
 }
 
 void generateTexture(GLuint *texture) {
@@ -132,7 +132,7 @@ void initSDL() {
     videoFlags = SDL_OPENGL | SDL_RESIZABLE;
   } else {
     videoFlags = SDL_OPENGL | SDL_FULLSCREEN;
-  } 
+  }
   if ( SDL_SetVideoMode(screenWidth, screenHeight, 0, videoFlags) == NULL ) {
     fprintf(stderr, "Unable to create OpenGL screen: %s\n", SDL_GetError());
     SDL_Quit();
@@ -203,7 +203,7 @@ void swapGLScene() {
   SDL_GL_SwapBuffers();
 }
 
-void drawBox(GLfloat x, GLfloat y, GLfloat width, GLfloat height, 
+void drawBox(GLfloat x, GLfloat y, GLfloat width, GLfloat height,
 	     int r, int g, int b) {
   glPushMatrix();
   glTranslatef(x, y, 0);
@@ -268,10 +268,10 @@ void drawRollLine(GLfloat x, GLfloat y, GLfloat z, GLfloat width,
   glPopMatrix();
 }
 
-void drawSquare(GLfloat x1, GLfloat y1, GLfloat z1, 
-		GLfloat x2, GLfloat y2, GLfloat z2, 
-		GLfloat x3, GLfloat y3, GLfloat z3, 
-		GLfloat x4, GLfloat y4, GLfloat z4, 
+void drawSquare(GLfloat x1, GLfloat y1, GLfloat z1,
+		GLfloat x2, GLfloat y2, GLfloat z2,
+		GLfloat x3, GLfloat y3, GLfloat z3,
+		GLfloat x4, GLfloat y4, GLfloat z4,
 		int r, int g, int b) {
   glColor4ub(r, g, b, 64);
   glBegin(GL_TRIANGLE_FAN);
@@ -294,7 +294,7 @@ void drawStar(int f, GLfloat x, GLfloat y, GLfloat z, int r, int g, int b, float
   glTranslatef(x, y, z);
   glRotatef(rand()%360, 0.0f, 0.0f, 1.0f);
   glBegin(GL_TRIANGLE_FAN);
-  glTexCoord2f(0.0f, 1.0f); 
+  glTexCoord2f(0.0f, 1.0f);
   glVertex3f(-size, -size,  0);
   glTexCoord2f(1.0f, 1.0f);
   glVertex3f( size, -size,  0);
@@ -473,11 +473,11 @@ void drawBomb(GLfloat x, GLfloat y, GLfloat width, int cnt) {
   }
 }
 
-void drawCircle(GLfloat x, GLfloat y, GLfloat width, int cnt, 
+void drawCircle(GLfloat x, GLfloat y, GLfloat width, int cnt,
 		int r1, int g1, int b1, int r2, int b2, int g2) {
   int i, d;
   GLfloat x1, y1, x2, y2;
-  if ( (cnt&1) == 0 ) { 
+  if ( (cnt&1) == 0 ) {
     glColor4ub(r1, g1, b1, 64);
   } else {
     glColor4ub(255, 255, 255, 64);
@@ -806,7 +806,7 @@ void drawTitleBoard() {
   glBindTexture(GL_TEXTURE_2D, titleTexture);
   glColor4ub(255, 255, 255, 255);
   glBegin(GL_TRIANGLE_FAN);
-  glTexCoord2f(0.0f, 0.0f); 
+  glTexCoord2f(0.0f, 0.0f);
   glVertex3f(350, 78,  0);
   glTexCoord2f(1.0f, 0.0f);
   glVertex3f(470, 78,  0);
